@@ -2,7 +2,7 @@
 
 NanoEdit 是一个基于 Google **Gemini 2.5 Flash** 模型构建的现代化 AI 图像编辑应用。它允许用户通过简单的画笔涂抹和文字指令，对图片进行局部重绘、风格转换，或者从零开始生成全新的图像。
 
-![Project Screenshot](https://via.placeholder.com/1200x600?text=NanoEdit+Screenshot)
+![NanoEdit Preview](./assets/preview.png)
 
 ## ✨ 主要功能
 
@@ -17,6 +17,27 @@ NanoEdit 是一个基于 Google **Gemini 2.5 Flash** 模型构建的现代化 AI
     *   支持“遮罩模式”（红底）和“绘图模式”（彩色草图）。
 *   **风格预设**：内置赛博朋克、水彩、素描等多种艺术风格，一键应用。
 *   **安全配置**：API Key 可通过界面配置或环境变量注入，不会硬编码在代码中。
+
+## 🛠️ 技术实现细节 (关键)
+
+本项目采用了一个独特的 **"Single Model Strategy" (单模型策略)**，仅依赖 **Gemini 2.5 Flash Image (Nano Banana)** 模型即可完成图像编辑和文生图任务，并实现了严格的宽高比控制。
+
+### 1. 强制宽高比控制原理
+Gemini 2.5 Flash Image 模型本身是一个 Image-to-Image 模型，不直接支持 `aspectRatio` 参数。为了实现 16:9 或 4:3 等输出比例，本项目采用了 **"Synthetic Canvas Input" (合成画布输入)** 技术：
+
+1.  **检测输入**：当用户请求生成图片时，系统首先检测当前是否有用户上传的底图。
+2.  **构建虚拟画布**：
+    *   如果没有底图（纯文生图模式），前端会根据用户选择的比例（如 16:9），在内存中动态绘制一张纯白色的 Base64 图片（例如 1024x576 像素）。
+    *   这张纯白图片被作为 `image input` 传给模型。
+3.  **模型行为引导**：
+    *   Gemini 2.5 Flash Image 倾向于保持输入图像的尺寸和比例。
+    *   通过输入一张 16:9 的白纸，并配合提示词 `"Use the provided white image as the canvas size..."`，模型会被“欺骗”并在这个限定的框内生成内容，从而完美输出 16:9 的结果。
+
+### 2. 纯前端架构
+*   **Canvas 交互**：使用 HTML5 Canvas API 处理所有的绘图、遮罩生成和图像合成。
+*   **数据流**：
+    *   **编辑模式**：`[原图] + [遮罩层] -> 合成图 -> API`
+    *   **创作模式**：`[空白虚拟画布] -> API`
 
 ## 🛠️ 技术栈
 

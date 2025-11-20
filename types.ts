@@ -6,6 +6,7 @@ export interface ImageSession {
   maskUrl: string | null; // Data URL of the drawn mask
   compositeUrl: string | null; // The combined image (bg + drawings) to send to AI
   isDirty: boolean;
+  hasDrawings: boolean;
 }
 
 export type ToolType = 'brush' | 'eraser' | 'rect' | 'circle';

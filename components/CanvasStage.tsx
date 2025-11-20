@@ -5,7 +5,7 @@ import { Undo, RefreshCcw, Square, Circle, Brush, Eraser } from 'lucide-react';
 interface CanvasStageProps {
   imageUrl: string | null;
   aspectRatio: string; // e.g., "1:1", "16:9"
-  onUpdate: (compositeUrl: string, maskUrl: string | null) => void;
+  onUpdate: (compositeUrl: string, maskUrl: string | null, hasDrawings: boolean) => void;
   isActive: boolean;
 }
 
@@ -184,16 +184,21 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ imageUrl, aspectRatio, onUpda
         }
     }
 
-    onUpdate(compositeUrl, maskUrl);
+    const hasDrawings = elements.length > 0 || currentElement !== null;
+    onUpdate(compositeUrl, maskUrl, hasDrawings);
 
   }, [elements, currentElement, dimensions, onUpdate]);
 
-  // Trigger export when drawing finishes
+  // Trigger export when drawing finishes or DIMENSIONS change (Important for blank canvas aspect ratio)
   useEffect(() => {
       if (!currentElement) {
-          exportCanvas();
+          // We need a small delay to ensure the canvas has re-rendered with new dimensions
+          const timer = setTimeout(() => {
+              exportCanvas();
+          }, 50);
+          return () => clearTimeout(timer);
       }
-  }, [currentElement, elements, exportCanvas]);
+  }, [currentElement, elements, dimensions, exportCanvas]);
 
   // --- Event Handlers ---
   const getPoint = (e: React.MouseEvent | React.TouchEvent): Point | null => {
@@ -285,7 +290,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ imageUrl, aspectRatio, onUpda
                 <button onClick={() => setTool('eraser')} title="橡皮擦" className={`p-2 rounded-lg ${tool === 'eraser' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}><Eraser size={18}/></button>
              )}
              <div className="w-px h-6 bg-slate-700 mx-1"></div>
-            <button onClick={() => { setElements([]); onUpdate(imageUrl || '', null); }} title="清除" className="p-2 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg"><RefreshCcw size={18}/></button>
+            <button onClick={() => { setElements([]); onUpdate(imageUrl || '', null, false); }} title="清除" className="p-2 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg"><RefreshCcw size={18}/></button>
             <button onClick={() => setElements(e => e.slice(0, -1))} title="撤销" className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg"><Undo size={18}/></button>
         </div>
 

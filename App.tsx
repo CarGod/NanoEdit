@@ -20,31 +20,6 @@ const ASPECT_RATIOS = [
   { label: '9:16', value: '9:16', w: 'w-3.5', h: 'h-6' },
 ];
 
-// Helper to calculate dimensions for the virtual canvas (high res)
-const getGenerationDimensions = (ratio: string) => {
-  const [w, h] = ratio.split(':').map(Number);
-  const base = 1024; 
-  if (w > h) {
-      return { w: base, h: Math.round(base * (h / w)) };
-  } else {
-      return { w: Math.round(base * (w / h)), h: base };
-  }
-};
-
-// Helper to create a blank white image Data URL
-const createBlankCanvasDataUrl = (ratio: string): string => {
-  const { w, h } = getGenerationDimensions(ratio);
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, w, h);
-  }
-  return canvas.toDataURL('image/png');
-};
-
 export default function App() {
   // State
   const [sessions, setSessions] = useState<ImageSession[]>([]);
@@ -58,7 +33,10 @@ export default function App() {
   // API Key State - safely access process.env
   const [apiKey, setApiKey] = useState(() => {
     try {
-      return typeof process !== 'undefined' ? process.env.API_KEY || '' : '';
+      if (typeof process !== 'undefined' && process && process.env) {
+        return process.env.API_KEY || '';
+      }
+      return '';
     } catch {
       return '';
     }
@@ -67,14 +45,16 @@ export default function App() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
+      // Fix: Explicitly type the array from FileList to File[] to ensure correct type inference for map callback
+      const files: File[] = Array.from(e.target.files);
       const newSessions: ImageSession[] = files.map((file) => ({
         id: Math.random().toString(36).substring(7),
         file,
         originalUrl: URL.createObjectURL(file),
         maskUrl: null,
         compositeUrl: null,
-        isDirty: false
+        isDirty: false,
+        hasDrawings: false
       }));
 
       setSessions(prev => [...prev, ...newSessions]);
@@ -93,7 +73,8 @@ export default function App() {
         originalUrl: null, // Indicates blank canvas
         maskUrl: null,
         compositeUrl: null,
-        isDirty: false
+        isDirty: false,
+        hasDrawings: false
     };
     setSessions(prev => [...prev, newSession]);
     setActiveSessionId(newSession.id);
@@ -109,10 +90,10 @@ export default function App() {
     }
   };
 
-  const updateSessionData = useCallback((compositeUrl: string, maskUrl: string | null) => {
+  const updateSessionData = useCallback((compositeUrl: string, maskUrl: string | null, hasDrawings: boolean) => {
     if (!activeSessionId) return;
     setSessions(prev => prev.map(s => 
-      s.id === activeSessionId ? { ...s, compositeUrl, maskUrl, isDirty: true } : s
+      s.id === activeSessionId ? { ...s, compositeUrl, maskUrl, isDirty: true, hasDrawings } : s
     ));
   }, [activeSessionId]);
 
@@ -133,25 +114,11 @@ export default function App() {
     setGeneratedImages([]);
 
     try {
-      let sessionToUse = sessions;
-      
-      // Pure Text-to-Image logic:
-      // If the user hasn't created any sessions (uploaded or blank canvas),
-      // we automatically create a temporary virtual session with a blank white image 
-      // matching the selected Aspect Ratio. This forces the model to output the correct size.
-      if (sessionToUse.length === 0) {
-        const blankUrl = createBlankCanvasDataUrl(aspectRatio);
-        sessionToUse = [{
-            id: 'temp-generation-session',
-            file: null,
-            originalUrl: blankUrl, 
-            maskUrl: null,
-            compositeUrl: blankUrl,
-            isDirty: false
-        }];
-      }
+      // If sessions are empty, we pass empty list. Service handles logic to use Imagen for Text-to-Image.
+      // If session is blank canvas but no drawings, Service also handles logic to use Imagen.
+      const sessionToUse = sessions;
 
-      const results = await generateEditedImages(sessionToUse, prompt, apiKey);
+      const results = await generateEditedImages(sessionToUse, prompt, apiKey, aspectRatio);
       setGeneratedImages(results);
     } catch (err: any) {
       setError(err.message || "生成图片失败。请重试。");
