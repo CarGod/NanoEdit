@@ -2,7 +2,7 @@
 
 NanoEdit 是一个基于 Google **Gemini 2.5 Flash** 模型构建的现代化 AI 图像编辑应用。它允许用户通过简单的画笔涂抹和文字指令，对图片进行局部重绘、风格转换，或者从零开始生成全新的图像。
 
-![NanoEdit Preview](https://github.com/CarGod/NanoEdit/blob/main/assets/preview.png?raw=true)
+<img width="2497" height="1320" alt="preview" src="https://github.com/user-attachments/assets/3ec9c871-971b-434f-aed9-7f7cb7accee2" />
 
 ## ✨ 主要功能
 
