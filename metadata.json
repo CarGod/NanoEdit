@@ -1,0 +1,5 @@
+{
+  "name": "NanoEdit",
+  "description": "使用 Gemini 2.5 Flash Image 进行高级图像编辑。上传照片，用画笔圈选区域，并通过文字描述来改变图像。",
+  "requestFramePermissions": []
+}
